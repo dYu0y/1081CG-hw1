@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>three.js webgl - geometry - cube</title>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	<style>
+		body {
+			margin: 0px;
+			background-color: #000000;
+			overflow: hidden;
+		}
+	</style>
+</head>
+
+<body>
+	<script src="three.js/build/three.r89.min.js"></script>
+	<script src="js/controls/OrbitControls.js"></script>
+	<script src="js/libs/dat.gui.min.js"></script>
+
+	<script>
+		"use strict";
+		var controls;
+		
+		var light, light2, light3;
+		var camera, scene, renderer;
+		var my_tank;
+
+		var cameras = [];
+
+		var gravity = -9.8; // 向上為正
+		var velocity = 0;
+		var acc = 0;
+		var turn = 0;
+		var heading = 0;
+		var lastTime;
+
+		var quat;
+
+		var gui, params;
+		var guiMe = function () {
+			this.Heading = heading;
+			this.BarrelHeading = velocity;
+			this.addSpeed = 15;
+			this.rotSpeed = 15;
+			this.Stop = function () {
+				velocity = 0.0;
+				this.Velocity = velocity;
+			};
+			this.FollowMe = false;
+			this.x = '0.0';
+			this.y = '0.0';
+			this.z = '0.0';
+			this.w = 0;
+		};
+
+		Tank.prototype = Object.create(THREE.Object3D.prototype);
+
+		init();
+
+		lastTime = Date.now();
+
+		animate();
+
+		function init() {
+
+			camera = new THREE.PerspectiveCamera(85, window.innerWidth / window.innerHeight, 1, 5000);
+			camera.position.y = 100;
+			camera.position.z = 100;
+			cameras.push(camera);
+
+			scene = new THREE.Scene();
+
+			// create a light
+			light = new THREE.DirectionalLight(0xffffff);
+			light.position.set(100, 200, 400);
+			scene.add(light);
+			light2 = new THREE.DirectionalLight(0xffffff);
+			light2.position.set(-400, 200, -400);
+			scene.add(light2);
+			light3 = new THREE.DirectionalLight(0xffffff);
+			light3.position.set(100, -400, -400);
+			scene.add(light3);
+
+			// add a ground plane
+			var texture = new THREE.TextureLoader().load('textures/UV_Grid_Sm.jpg');
+			var geometry = new THREE.PlaneGeometry(1000, 1000);
+			var material = new THREE.MeshPhongMaterial({ map: texture, side: THREE.DoubleSide });
+			var plane = new THREE.Mesh(geometry, material);
+			plane.rotation.x = -90 * Math.PI / 180;
+			plane.position.y = 0.0;
+			scene.add(plane);
+
+			var axisHelper = new THREE.AxesHelper(200);
+			scene.add(axisHelper);
+
+			scene.fog = new THREE.Fog(0xa0a0a0, 700, 1000);
+
+			my_tank = new Tank();
+
+			renderer = new THREE.WebGLRenderer();
+
+			// set the background color to gray
+			renderer.setClearColor(0xa0a0a0);
+
+			renderer.setPixelRatio(window.devicePixelRatio);
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			document.body.appendChild(renderer.domElement);
+
+			// let's have the mouse affect the view
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+			window.addEventListener('resize', onWindowResize, false);
+
+			// add some GUI
+			params = new guiMe();
+			gui = new dat.GUI();
+
+			gui.add(params, 'Heading').listen();
+			gui.add(params, 'BarrelHeading').listen();
+			gui.add(params, 'addSpeed', 0, 30);
+			gui.add(params, 'rotSpeed', 0, 30);
+			gui.add(params, 'Stop');
+			gui.add(params, 'FollowMe').listen();
+			gui.add(params, 'x').listen();
+			gui.add(params, 'y').listen();
+			gui.add(params, 'z').listen();
+			gui.add(params, 'w').listen();
+			gui.open();
+
+			window.onkeydown = function (event) {
+				var key = String.fromCharCode(event.keyCode);
+				switch (key) {
+					case 'w': case 'W':
+						acc = 1;
+						break;
+					case 's': case 'S':
+						acc = -1;
+						break;
+					case 'a': case 'A':
+						turn = 1;
+						break;
+					case 'd': case 'D':
+						turn = -1;
+						break;
+					case ' ':
+						// if (my_tank.position.y == 0) {
+						// 	params.w += 150;
+						// 	my_tank.position.y = 0.1;
+						// }
+						break;
+				}
+			};
+
+			window.onkeyup = function (event) {
+				var key = String.fromCharCode(event.keyCode);
+				switch (key) {
+					case 'w': case 'W':
+						acc = 0;
+						break;
+					case 's': case 'S':
+						acc = 0;
+						break;
+					case 'a': case 'A':
+						turn = 0;
+						break;
+					case 'd': case 'D':
+						turn = 0;
+						break;
+
+				}
+			};
+		}
+
+		function onWindowResize() {
+			cameras.forEach(cam => {
+				cam.aspect = window.innerWidth / window.innerHeight;
+				cam.updateProjectionMatrix();
+			});
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+
+		function animate() {
+
+			// Rotate the wheel
+			var dt = (Date.now() - lastTime) / 1000.0;
+			lastTime = Date.now();
+			// mesh.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), params.rotSpeed * deltaTime / 1000.0);
+			my_tank.rotation.y += turn * (0.5 * Math.PI) * (params.rotSpeed / 30) * dt;
+			// mesh.rotateOnAxis(new THREE.Vector3(0, 0, 1), deltaTime / 1000.0);
+			//or rotateOnWorldAxis?? check the document :)
+
+			// Move the body & head
+
+			// Camera now following the BB8
+			//if(params.FollowMe){
+			//	;
+			//}
+
+			velocity = Math.pow(0.4, dt) * (velocity + dt * acc * (params.addSpeed / 30) * 64);
+			// params.Velocity = velocity = velocity - params.addSpeed * 0.1 * deltaTime / 1000.0 > 0 ? velocity - params.addSpeed * 0.1 * deltaTime / 1000.0 : 0;
+			params.Heading = heading = my_tank.rotation.y / Math.PI * 180 % 360;
+
+			my_tank.translateZ(-velocity * dt);
+			my_tank.animate();
+
+			// if (my_tank.position.y > 0) {
+			params.w += gravity * dt;
+			my_tank.position.y += dt * (params.w + gravity * dt / 2);
+			if (my_tank.position.y <= 0) {
+				my_tank.position.y = 0;
+				params.w = 0;
+			}
+			// }
+
+			if (params.FollowMe) {
+				controls.enabled = false;
+				renderer.render(scene, my_tank.camera);
+			}
+			else {
+				controls.enabled = true;
+				renderer.render(scene, camera);
+				// have the mouse update the view
+				controls.update();
+			}
+
+			requestAnimationFrame(animate);
+		}
+
+		function BB8() {
+			THREE.Object3D.call(this);
+			this.texture_ = new THREE.TextureLoader().load('textures/BB8.jpg');
+			this.geometry_ = new THREE.SphereGeometry(2.5, 32, 16);
+			this.material_ = new THREE.MeshPhongMaterial({ map: this.texture_ });
+			this.mesh_ = new THREE.Mesh(this.geometry_, this.material_);
+			this.mesh_.rotation.y = 90 * Math.PI / 180;
+			this.mesh_.position.y = this.geometry_.parameters.radius + 0.001;
+			this.camera = camera.clone();
+			this.camera.position.set(0, 25, 20);
+			this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+			cameras.push(this.camera);
+
+			this.add(this.mesh_);
+			this.add(this.camera);
+
+			scene.add(this);
+
+			this.animate = function () {
+				this.mesh_.rotation.x += -velocity * dt / my_tank.geometry_.parameters.radius;
+			};
+		}
+
+		function Tank() {
+			THREE.Object3D.call(this);
+			this.length = 4;
+			this.width = 6;
+
+			this.shape = new THREE.Shape();
+			this.shape.moveTo(0, 0);
+			this.shape.lineTo(0, this.width);
+			this.shape.lineTo(this.length, this.width);
+			this.shape.lineTo(this.length, 0);
+			this.shape.lineTo(0, 0);
+
+			this.extrudeSettings = {
+				steps: 1,
+				depth: .5,
+				amount: .5, // ...
+				bevelEnabled: true,
+				bevelThickness: 1,
+				bevelSize: 1,
+				bevelOffset: 1,
+				bevelSegments: 1
+			};
+			this.geometry_ = new THREE.ExtrudeGeometry(this.shape, this.extrudeSettings);
+			this.material_ = new THREE.MeshPhongMaterial({ color: 0x659157 });
+			this.mesh_ = new THREE.Mesh(this.geometry_, this.material_);
+			this.mesh_.position.y = 3;
+			this.mesh_.rotation.x = Math.PI / 2;
+			this.camera = camera.clone();
+			this.camera.position.set(0, 25, 20);
+			this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+			cameras.push(this.camera);
+
+			this.add(this.camera);
+			this.add(this.mesh_);
+			scene.add(this);
+
+			this.animate = function () {
+
+			};
+		}
+
+	</script>
+</body>
+
+</html>
