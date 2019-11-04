@@ -39,9 +39,6 @@
 		var heading = 0;
 		var lastTime;
 
-		var auto_forward = 0;
-		var auto_rotate = 0;
-
 		var follow_mode = [
 			"At back (Press T to switch)",
 			"fixed angle of view (Press T to switch)",
@@ -152,19 +149,15 @@
 				switch (key) {
 					case 'w': case 'W':
 						acc = 1;
-						auto_forward = 0;
 						break;
 					case 's': case 'S':
 						acc = -1;
-						auto_forward = 0;
 						break;
 					case 'a': case 'A':
 						turn = 1;
-						auto_rotate = 0;
 						break;
 					case 'd': case 'D':
 						turn = -1;
-						auto_rotate = 0;
 						break;
 					case ' ':
 						// if (my_tank.position.y == 0) {
@@ -176,18 +169,18 @@
 						params.FollowMe = follow_mode[(follow_mode.indexOf(params.FollowMe) + 1) % follow_mode.length];
 						break;
 					case 'r': case 'R':
-						if (auto_forward < 3)
-							++auto_forward;
+						if(acc <= 0.66)
+							acc += 0.33;
 						break;
 					case 'f': case 'F':
-						if (auto_forward > -3)
-							--auto_forward;
+						if (acc >= -0.67)
+							acc -= 0.33;
 						break;
 					case 'q': case 'Q':
-						auto_rotate = 1;
+						turn = 1;
 						break;
 					case 'e': case 'E':
-						auto_rotate = -1;
+						turn = -1;
 						break;
 				}
 			};
@@ -230,10 +223,7 @@
 			var dt = (Date.now() - lastTime) / 1000.0;
 			lastTime = Date.now();
 			// mesh.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), params.rotSpeed * deltaTime / 1000.0);
-			if(!auto_rotate)
-				my_tank.rotation.y = (my_tank.rotation.y + (Math.sign(velocity) | 1) * turn * (0.5 * Math.PI) * (params.rotSpeed / 30) * dt + 2 * Math.PI) % (2 * Math.PI);
-			else
-				my_tank.rotation.y = (my_tank.rotation.y + (Math.sign(velocity) | 1) * auto_rotate * (0.5 * Math.PI) * (params.rotSpeed / 30) * dt + 2 * Math.PI) % (2 * Math.PI);
+			my_tank.rotation.y = (my_tank.rotation.y + (Math.sign(velocity) | 1) * turn * (0.5 * Math.PI) * (params.rotSpeed / 30) * dt + 2 * Math.PI) % (2 * Math.PI);
 			// mesh.rotateOnAxis(new THREE.Vector3(0, 0, 1), deltaTime / 1000.0);
 			//or rotateOnWorldAxis?? check the document :)
 
@@ -243,10 +233,7 @@
 			//if(params.FollowMe){
 			//	;
 			//}
-			if (!auto_forward)
-				velocity = Math.pow(0.4, dt) * (velocity + dt * acc * (params.addSpeed / 30) * 64);
-			else
-				velocity = Math.pow(0.4, dt) * (velocity + dt * auto_forward / 3 * (params.addSpeed / 30) * 64);
+			velocity = Math.pow(0.4, dt) * (velocity + dt * acc * (params.addSpeed / 30) * 64);
 			// params.Velocity = velocity = velocity - params.addSpeed * 0.1 * deltaTime / 1000.0 > 0 ? velocity - params.addSpeed * 0.1 * deltaTime / 1000.0 : 0;
 			params.Heading = heading = my_tank.rotation.y / Math.PI * 180 % 360;
 
