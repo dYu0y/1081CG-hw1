@@ -15,6 +15,7 @@
 </head>
 
 <body>
+	<div id="stats" style="position: absolute; top: 0; left: 0;"></div>
 	<script src="three.js/build/three.r89.min.js"></script>
 	<script src="js/controls/OrbitControls.js"></script>
 	<script src="js/libs/dat.gui.min.js"></script>
@@ -95,7 +96,7 @@
 			var axisHelper = new THREE.AxesHelper(200);
 			scene.add(axisHelper);
 
-			scene.fog = new THREE.Fog(0xa0a0a0, 700, 1000);
+			scene.fog = new THREE.Fog(0xa0a0a0, 50, 1000);
 
 			my_tank = new Tank();
 
@@ -204,15 +205,6 @@
 
 			my_tank.translateZ(-velocity * dt);
 			my_tank.animate();
-
-			// if (my_tank.position.y > 0) {
-			params.w += gravity * dt;
-			my_tank.position.y += dt * (params.w + gravity * dt / 2);
-			if (my_tank.position.y <= 0) {
-				my_tank.position.y = 0;
-				params.w = 0;
-			}
-			// }
 
 			if (params.FollowMe) {
 				controls.enabled = false;
