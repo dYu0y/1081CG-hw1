@@ -16,6 +16,7 @@
 
 <body>
 	<div id="stats" style="position: absolute; top: 0; left: 0;"></div>
+	<!-- <div  style="width: 10%; height: 10%; background-color:#FFD382; margin: 0; position: fixed; bottom: 10%; right: 10%;">123</div> -->
 	<script src="three.js/build/three.r89.min.js"></script>
 	<script src="js/controls/OrbitControls.js"></script>
 	<script src="js/libs/dat.gui.min.js"></script>
@@ -27,7 +28,7 @@
 
 		var light, light2, light3;
 		var camera, scene, renderer;
-		var my_tank;
+		var my_tank, ring, plen = 0.7 * Math.PI;
 
 		var cameras = [];
 
@@ -37,6 +38,10 @@
 		var turn = 0;
 		var heading = 0;
 		var lastTime;
+
+		const stats = new Stats();
+		stats.setMode(0);
+		document.getElementById('stats').appendChild(stats.domElement);
 
 		const stats = new Stats();
 		stats.setMode(0);
@@ -65,7 +70,7 @@
 
 		function init() {
 
-			camera = new THREE.PerspectiveCamera(85, window.innerWidth / window.innerHeight, 1, 5000);
+			camera = new THREE.PerspectiveCamera(85, window.innerWidth / window.innerHeight, 1, 800);
 			camera.position.y = 100;
 			camera.position.z = 100;
 			cameras.push(camera);
@@ -82,18 +87,20 @@
 			light3 = new THREE.DirectionalLight(0xffffff);
 			light3.position.set(100, -400, -400);
 			scene.add(light3);
+			var light4 = new THREE.HemisphereLight(0xffffbb, 0xa0a0a0, 0.3);
+			scene.add(light4);
 
 			// add a ground plane
 			var texture = new THREE.TextureLoader().load('textures/UV_Grid_Sm.jpg');
-			var geometry = new THREE.PlaneGeometry(1000, 1000);
-			var material = new THREE.MeshPhongMaterial({ map: texture, side: THREE.DoubleSide });
+			var geometry = new THREE.PlaneGeometry(500, 500);
+			var material = new THREE.MeshPhongMaterial({ map: texture });
 			var plane = new THREE.Mesh(geometry, material);
 			plane.rotation.x = -90 * Math.PI / 180;
 			plane.position.y = 0.0;
 			scene.add(plane);
 
-			var axisHelper = new THREE.AxesHelper(200);
-			scene.add(axisHelper);
+			// var axisHelper = new THREE.AxesHelper(200);
+			// scene.add(axisHelper);
 
 			scene.fog = new THREE.Fog(0xa0a0a0, 50, 500);
 
@@ -124,6 +131,10 @@
 			gui.add(params, 'Stop');
 			gui.add(params, 'FollowMe').listen();
 			gui.open();
+
+			ring = new THREE.Mesh(new THREE.RingGeometry(4, 5, 7, 1, 0, 0.7 * Math.PI), new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide }));
+			ring.rotation.y = Math.PI;
+			scene.add(ring);
 
 			window.onkeydown = function (event) {
 				var key = String.fromCharCode(event.keyCode);
@@ -201,6 +212,15 @@
 			my_tank.translateZ(-velocity * dt);
 			my_tank.animate();
 
+			// if (my_tank.position.y > 0) {
+			// params.w += gravity * dt;
+			// my_tank.position.y += dt * (params.w + gravity * dt / 2);
+			// if (my_tank.position.y <= 0) {
+			// 	my_tank.position.y = 0;
+			// 	params.w = 0;
+			// }
+			// }
+
 			if (params.FollowMe) {
 				controls.enabled = false;
 				renderer.render(scene, my_tank.camera);
@@ -210,6 +230,12 @@
 				renderer.render(scene, camera);
 				// have the mouse update the view
 				controls.update();
+			}
+
+			if(plen !== params.len) {
+				ring.geometry = new THREE.RingGeometry(4, 5, 10, 8, 0, params.len);
+				plen = params.len;
+				console.log("redraw!!");
 			}
 
 			requestAnimationFrame(animate);
