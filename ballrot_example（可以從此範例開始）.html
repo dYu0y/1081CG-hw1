@@ -39,9 +39,11 @@
 		var heading = 0;
 		var lastTime;
 
-		const stats = new Stats();
-		stats.setMode(0);
-		document.getElementById('stats').appendChild(stats.domElement);
+		var follow_mode = [
+			"At back (Press T to switch)",
+			"fixed angle of view (Press T to switch)",
+			"nope (Press T to switch)"
+		];
 
 		const stats = new Stats();
 		stats.setMode(0);
@@ -57,7 +59,10 @@
 				velocity = 0.0;
 				this.Velocity = velocity;
 			};
-			this.FollowMe = true;
+			this.FollowMe = follow_mode[0];
+			this.x = 0.01;
+			this.y = 0.01;
+			this.z = 0.01;
 		};
 
 		Tank.prototype = Object.create(THREE.Object3D.prototype);
@@ -129,7 +134,10 @@
 			gui.add(params, 'addSpeed', 0, 30);
 			gui.add(params, 'rotSpeed', 0, 30);
 			gui.add(params, 'Stop');
-			gui.add(params, 'FollowMe').listen();
+			gui.add(params, 'FollowMe', follow_mode).listen();
+			gui.add(params, 'x');
+			gui.add(params, 'y');
+			gui.add(params, 'z');
 			gui.open();
 
 			ring = new THREE.Mesh(new THREE.RingGeometry(4, 5, 7, 1, 0, 0.7 * Math.PI), new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide }));
@@ -156,6 +164,9 @@
 						// 	params.w += 150;
 						// 	my_tank.position.y = 0.1;
 						// }
+						break;
+					case 't': case 'T':
+						params.FollowMe = follow_mode[(follow_mode.indexOf(params.FollowMe) + 1) % follow_mode.length];
 						break;
 				}
 			};
@@ -188,13 +199,17 @@
 			renderer.setSize(window.innerWidth, window.innerHeight);
 		}
 
+		var ff = function () { };
+
 		function animate() {
+			if (ff)
+				ff();
 			stats.update();
 			// Rotate the wheel
 			var dt = (Date.now() - lastTime) / 1000.0;
 			lastTime = Date.now();
 			// mesh.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), params.rotSpeed * deltaTime / 1000.0);
-			my_tank.rotation.y = (my_tank.rotation.y + turn * (0.5 * Math.PI) * (params.rotSpeed / 30) * dt + 2 * Math.PI) % (2 * Math.PI);
+			my_tank.rotation.y = (my_tank.rotation.y + (Math.sign(velocity) | 1) * turn * (0.5 * Math.PI) * (params.rotSpeed / 30) * dt + 2 * Math.PI) % (2 * Math.PI);
 			// mesh.rotateOnAxis(new THREE.Vector3(0, 0, 1), deltaTime / 1000.0);
 			//or rotateOnWorldAxis?? check the document :)
 
@@ -210,7 +225,7 @@
 			params.Heading = heading = my_tank.rotation.y / Math.PI * 180 % 360;
 
 			my_tank.translateZ(-velocity * dt);
-			my_tank.animate();
+			my_tank.animate(dt);
 
 			// if (my_tank.position.y > 0) {
 			// params.w += gravity * dt;
@@ -221,18 +236,27 @@
 			// }
 			// }
 
-			if (params.FollowMe) {
-				controls.enabled = false;
-				renderer.render(scene, my_tank.camera);
-			}
-			else {
-				controls.enabled = true;
-				renderer.render(scene, camera);
-				// have the mouse update the view
-				controls.update();
+			switch (follow_mode.indexOf(params.FollowMe)) {
+				case 0:
+					controls.enabled = false;
+					renderer.render(scene, my_tank.camera);
+					my_tank.camera.getWorldPosition(camera.position);
+					controls.target = my_tank.position.clone();
+					break;
+				case 1:
+					camera.position.set(0, 10, 10);
+					camera.position.add(my_tank.position);
+					controls.target = my_tank.position.clone();
+				case 2:
+					controls.enabled = true;
+					// have the mouse update the view
+					controls.update();
+					renderer.render(scene, camera);
+					break;
+				default:
 			}
 
-			if(plen !== params.len) {
+			if (plen !== params.len) {
 				ring.geometry = new THREE.RingGeometry(4, 5, 10, 8, 0, params.len);
 				plen = params.len;
 				console.log("redraw!!");
@@ -289,7 +313,7 @@
 			this.geometry_ = new THREE.ExtrudeGeometry(this.shape, this.extrudeSettings);
 			this.material_ = new THREE.MeshPhongMaterial({ color: 0x659157 });
 			this.mesh_ = new THREE.Mesh(this.geometry_, this.material_);
-			this.mesh_.position.y = 3;
+			this.mesh_.position.set(-this.length / 2, 3, -this.width / 2);
 			this.mesh_.rotation.x = Math.PI / 2;
 			this.camera = camera.clone();
 			this.camera.position.set(0, 25, 20);
@@ -300,8 +324,29 @@
 			this.add(this.mesh_);
 			scene.add(this);
 
-			this.animate = function () {
+			let self = this;
+			this.wheels = [
+				[-1, 0.2, 1.4],
+				[-1, 6, 1.4],
+				[5, 0.2, 1.4],
+				[5, 6, 1.4]
+			].map((pos) => {
+				var geometry = new THREE.SphereGeometry(1.5, 8, 6);
+				var material = new THREE.MeshBasicMaterial({ map: new THREE.TextureLoader().load('textures/tire.jpg') });
+				var sphere = new THREE.Mesh(geometry, material);
+				sphere.rotation.z = Math.PI / 2;
+				sphere.scale.y = 1 / 2;
+				sphere.position.set(...pos);
+				self.mesh_.add(sphere);
+				return sphere;
+			});
 
+
+			this.animate = function (time) {
+				this.wheels.forEach((wh) => {
+					wh.rotation.x -= velocity * time / wh.geometry.parameters.radius +
+						((Math.sign(velocity) | 1) * Math.sign(wh.position.x) * turn * 2 * Math.PI * time * (params.rotSpeed / 15));
+				});
 			};
 		}
 
