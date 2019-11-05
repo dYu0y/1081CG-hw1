@@ -38,6 +38,8 @@
 		var turn = 0;
 		var heading = 0;
 		var lastTime;
+		var keyDownMap = new Array(256).fill(() => { });
+		var keyUpMap = keyDownMap.slice();
 
 		var follow_mode = [
 			"At back (Press T to switch)",
@@ -144,64 +146,42 @@
 			ring.rotation.y = Math.PI;
 			scene.add(ring);
 
+			(function addKeyBindings() {
+				var add = function (key, callback) {
+					if (typeof key === "string")
+						this[key.toUpperCase().charCodeAt(0)] = callback;
+					else if (typeof key === "number")
+						this[key] = callback;
+				};
+
+				add.call(keyDownMap, 'w', () => { acc = 1; });
+				add.call(keyDownMap, 's', () => { acc = -1; });
+				add.call(keyDownMap, 'a', () => { turn = 1; });
+				add.call(keyDownMap, 'd', () => { turn = -1; });
+				add.call(keyDownMap, 't', () => {
+					params.FollowMe = follow_mode[(follow_mode.indexOf(params.FollowMe) + 1) % follow_mode.length];
+				});
+				add.call(keyDownMap, 'r', () => { acc = Math.min(acc + 0.33, 1); });
+				add.call(keyDownMap, 'f', () => { acc = Math.max(acc - 0.33, -1); });
+				add.call(keyDownMap, 'q', () => { turn = 1; });
+				add.call(keyDownMap, 'e', () => { turn = -1; });
+
+				add.call(keyUpMap, 'w', () => { acc = 0; });
+				add.call(keyUpMap, 's', () => { acc = 0; });
+				add.call(keyUpMap, 'a', () => { turn = 0; });
+				add.call(keyUpMap, 'd', () => { turn = 0; });
+			})();
+
 			window.onkeydown = function (event) {
-				var key = String.fromCharCode(event.keyCode);
-				switch (key) {
-					case 'w': case 'W':
-						acc = 1;
-						break;
-					case 's': case 'S':
-						acc = -1;
-						break;
-					case 'a': case 'A':
-						turn = 1;
-						break;
-					case 'd': case 'D':
-						turn = -1;
-						break;
-					case ' ':
-						// if (my_tank.position.y == 0) {
-						// 	params.w += 150;
-						// 	my_tank.position.y = 0.1;
-						// }
-						break;
-					case 't': case 'T':
-						params.FollowMe = follow_mode[(follow_mode.indexOf(params.FollowMe) + 1) % follow_mode.length];
-						break;
-					case 'r': case 'R':
-						if(acc <= 0.66)
-							acc += 0.33;
-						break;
-					case 'f': case 'F':
-						if (acc >= -0.67)
-							acc -= 0.33;
-						break;
-					case 'q': case 'Q':
-						turn = 1;
-						break;
-					case 'e': case 'E':
-						turn = -1;
-						break;
-				}
+				(function execute(key) {
+					keyDownMap[key]();
+				})(event.keyCode);
 			};
 
 			window.onkeyup = function (event) {
-				var key = String.fromCharCode(event.keyCode);
-				switch (key) {
-					case 'w': case 'W':
-						acc = 0;
-						break;
-					case 's': case 'S':
-						acc = 0;
-						break;
-					case 'a': case 'A':
-						turn = 0;
-						break;
-					case 'd': case 'D':
-						turn = 0;
-						break;
-
-				}
+				(function execute(key) {
+					keyUpMap[key]();
+				})(event.keyCode);
 			};
 		}
 
