@@ -64,9 +64,9 @@
 				this.Velocity = velocity;
 			};
 			this.FollowMe = follow_mode[0];
-			this.x = 0.01;
-			this.y = 0.01;
-			this.z = 0.01;
+			this.x = 0.1;
+			this.y = 0.1;
+			this.z = 0.1;
 		};
 
 		Tank.prototype = Object.create(THREE.Object3D.prototype);
@@ -140,9 +140,9 @@
 			gui.add(params, 'tankGunRotSpeed', 0, 30);
 			gui.add(params, 'Stop');
 			gui.add(params, 'FollowMe', follow_mode).listen();
-			gui.add(params, 'x').listen();
-			gui.add(params, 'y').listen();
-			gui.add(params, 'z').listen();
+			gui.add(params, 'x', -10, 10, 0.1).listen();
+			gui.add(params, 'y', -10, 10, 0.1).listen();
+			gui.add(params, 'z', -10, 10, 0.1).listen();
 			gui.open();
 
 			ring = new THREE.Mesh(new THREE.RingGeometry(4, 5, 7, 1, 0, 0.7 * Math.PI), new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide }));
