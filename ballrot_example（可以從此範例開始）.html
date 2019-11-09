@@ -36,6 +36,7 @@
 		var velocity = 0;
 		var acc = 0;
 		var turn = 0;
+		var turret_turn = 0;
 		var heading = 0;
 		var lastTime;
 		var keyDownMap = new Array(256).fill(() => { });
@@ -57,6 +58,7 @@
 			this.BarrelHeading = velocity;
 			this.addSpeed = 15;
 			this.rotSpeed = 15;
+			this.tankGunRotSpeed = 15;
 			this.Stop = function () {
 				velocity = 0.0;
 				this.Velocity = velocity;
@@ -135,6 +137,7 @@
 			gui.add(params, 'BarrelHeading').listen();
 			gui.add(params, 'addSpeed', 0, 30);
 			gui.add(params, 'rotSpeed', 0, 30);
+			gui.add(params, 'tankGunRotSpeed', 0, 30);
 			gui.add(params, 'Stop');
 			gui.add(params, 'FollowMe', follow_mode).listen();
 			gui.add(params, 'x').listen();
@@ -165,14 +168,20 @@
 				add.call(keyDownMap, 'f', () => { acc = Math.max(acc - 0.33, -1); });
 				add.call(keyDownMap, 'q', () => { turn = 1; });
 				add.call(keyDownMap, 'e', () => { turn = -1; });
+				add.call(keyDownMap, 37, () => { turret_turn = 1; });
+				add.call(keyDownMap, 39, () => { turret_turn = -1; });
+
 
 				add.call(keyUpMap, 'w', () => { acc = 0; });
 				add.call(keyUpMap, 's', () => { acc = 0; });
 				add.call(keyUpMap, 'a', () => { turn = 0; });
 				add.call(keyUpMap, 'd', () => { turn = 0; });
+				add.call(keyUpMap, 37, () => { turret_turn = 0; });
+				add.call(keyUpMap, 39, () => { turret_turn = 0; });
 			})();
 
 			window.onkeydown = function (event) {
+				console.log(event.keyCode);
 				(function execute(key) {
 					keyDownMap[key]();
 				})(event.keyCode);
@@ -219,6 +228,8 @@
 
 			my_tank.translateZ(-velocity * dt);
 			my_tank.animate(dt);
+
+			my_tank.turret.rotation.y = (my_tank.turret.rotation.y + turret_turn * (0.5 * Math.PI) * (params.tankGunRotSpeed / 30) * dt + 2 * Math.PI) % (2 * Math.PI);
 
 			let rng = 500 / 2 - my_tank.width; // plane.geometry.parameters.width
 			my_tank.position.min(new THREE.Vector3(rng, 0, rng)).max(new THREE.Vector3(-rng, 0, -rng));
@@ -311,13 +322,27 @@
 			this.mesh_ = new THREE.Mesh(this.geometry_, this.material_);
 			this.mesh_.position.set(-this.length / 2, 3, -this.width / 2);
 			this.mesh_.rotation.x = Math.PI / 2;
+			this.add(this.mesh_);
 			this.camera = camera.clone();
 			this.camera.position.set(0, 25, 20);
 			this.camera.lookAt(new THREE.Vector3(0, 0, 0));
 			cameras.push(this.camera);
-
 			this.add(this.camera);
-			this.add(this.mesh_);
+
+
+			this.turret = new THREE.Mesh(
+				new THREE.CylinderGeometry(1.5, 1.8, 1.5, 6),
+				new THREE.MeshPhongMaterial({ color: 0x659157 }));
+			this.turret.position.set(0, 4.5, 0.5);
+			this.add(this.turret);
+
+			this.tank_gun = new THREE.Mesh(
+				new THREE.CylinderGeometry(0.2, 0.2, 2.3, 7),
+				new THREE.MeshPhongMaterial({ color: 0x659157 }));
+			this.tank_gun.position.set(0, 0.23, -2.65);
+			this.tank_gun.rotation.x = Math.PI / 2;
+			this.turret.add(this.tank_gun);
+
 			scene.add(this);
 
 			let self = this;
