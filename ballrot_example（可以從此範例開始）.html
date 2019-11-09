@@ -220,6 +220,9 @@
 			my_tank.translateZ(-velocity * dt);
 			my_tank.animate(dt);
 
+			let rng = 500 / 2 - my_tank.width; // plane.geometry.parameters.width
+			my_tank.position.min(new THREE.Vector3(rng, 0, rng)).max(new THREE.Vector3(-rng, 0, -rng));
+
 			// if (my_tank.position.y > 0) {
 			// params.w += gravity * dt;
 			// my_tank.position.y += dt * (params.w + gravity * dt / 2);
