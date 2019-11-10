@@ -32,9 +32,12 @@
 
 		var cameras = [];
 		var bullets = [];
+		var bb8s = [];
+		var preSpawnTime;
 
 		var gravity = -9.8; // 向上為正
 		var velocity = 0;
+		var bb8Velocity = 0;
 		var acc = 0;
 		var turn = 0;
 		var turret_turn = 0;
@@ -42,6 +45,7 @@
 		var lastTime;
 		var keyDownMap = new Array(256).fill(() => { });
 		var keyUpMap = keyDownMap.slice();
+
 
 		var follow_mode = [
 			"At back (Press T to switch)",
@@ -65,13 +69,16 @@
 				this.Velocity = velocity;
 			};
 			this.FollowMe = follow_mode[0];
+			this.spawnCd = 3;
+			this.minSpawnDistance = 1;
+			this.bb8Speed = 8;
 			this.x = 0.1;
 			this.y = 0.1;
 			this.z = 0.1;
 		};
 
 		Tank.prototype = Object.create(THREE.Object3D.prototype);
-		Tank.prototype.shoot = function() {
+		Tank.prototype.shoot = function () {
 			console.log("shoot");
 			var bullet = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshPhongMaterial({ color: 0x333333 }));
 			bullet.position.copy(my_tank.shoot_pivot.getWorldPosition());
@@ -79,14 +86,14 @@
 			bullet.velocity = new THREE.Vector3(0, 0, -50);
 			bullets.push(bullet);
 			scene.add(bullet);
-			
+
 			return bullet;
 		};
 		BB8.prototype = Object.create(THREE.Object3D.prototype);
 
 		init();
 
-		lastTime = Date.now();
+		preSpawnTime = lastTime = Date.now();
 
 		animate();
 
@@ -153,6 +160,9 @@
 			gui.add(params, 'tankGunRotSpeed', 0, 30);
 			gui.add(params, 'Stop');
 			gui.add(params, 'FollowMe', follow_mode).listen();
+			gui.add(params, 'spawnCd', 1, 10, 1).listen();
+			gui.add(params, 'minSpawnDistance', 1, 5, 0.1).listen();
+			gui.add(params, 'bb8Speed', 0, 30, 1).listen();
 			gui.add(params, 'x', -10, 10, 0.1).listen();
 			gui.add(params, 'y', -10, 10, 0.1).listen();
 			gui.add(params, 'z', -10, 10, 0.1).listen();
@@ -188,6 +198,7 @@
 				add.call(keyUpMap, 37, () => { turret_turn = 0; });
 				add.call(keyUpMap, 39, () => { turret_turn = 0; });
 				add.call(keyUpMap, ' ', () => { my_tank.shoot(); });
+				add.call(keyUpMap, 'p', () => { restart(); });
 			})();
 
 			window.onkeydown = function (event) {
@@ -244,6 +255,13 @@
 			let rng = 500 / 2 - my_tank.width; // plane.geometry.parameters.width
 			my_tank.position.min(new THREE.Vector3(rng, 0, rng)).max(new THREE.Vector3(-rng, 0, -rng));
 
+			bb8Velocity = params.bb8Speed / 30 * 64;
+			bb8s.forEach((bb8) => {
+				bb8.lookAt(my_tank.position.clone());
+				bb8.translateZ(bb8Velocity * dt);
+				bb8.animate(dt);
+				if(bb8.position.distanceTo(my_tank.position));
+			});
 			// if (my_tank.position.y > 0) {
 			// params.w += gravity * dt;
 			// my_tank.position.y += dt * (params.w + gravity * dt / 2);
@@ -267,6 +285,13 @@
 				r.material.dispose();
 				scene.remove(r);
 			});
+
+			if (lastTime - preSpawnTime > params.spawnCd * 800) {
+				preSpawnTime = lastTime;
+				var num = Math.min(getRandom(2, 6), 40 - bb8s.length);
+				for(var i = 0; i < num; ++i)
+					createBB8();
+			}
 
 			switch (follow_mode.indexOf(params.FollowMe)) {
 				case 0:
@@ -299,18 +324,18 @@
 			this.mesh_ = new THREE.Mesh(this.geometry_, this.material_);
 			this.mesh_.rotation.y = 90 * Math.PI / 180;
 			this.mesh_.position.y = this.geometry_.parameters.radius + 0.001;
-			this.camera = camera.clone();
-			this.camera.position.set(0, 25, 20);
-			this.camera.lookAt(new THREE.Vector3(0, 0, 0));
-			cameras.push(this.camera);
+			// this.camera = camera.clone();
+			// this.camera.position.set(0, 25, 20);
+			// this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+			// cameras.push(this.camera);
 
 			this.add(this.mesh_);
-			this.add(this.camera);
+			// this.add(this.camera);
 
 			scene.add(this);
 
-			this.animate = function () {
-				this.mesh_.rotation.x += -velocity * dt / my_tank.geometry_.parameters.radius;
+			this.animate = function (dt) {
+				this.mesh_.rotation.x += bb8Velocity * dt / this.geometry_.parameters.radius;
 			};
 		}
 
@@ -344,7 +369,7 @@
 			this.add(this.mesh_);
 			this.camera = camera.clone();
 			this.camera.position.set(0, 25, 20);
-			this.camera.lookAt(new THREE.Vector3(0, 0, 0));
+			this.camera.lookAt(new THREE.Vector3(0, 10, 0));
 			cameras.push(this.camera);
 			this.add(this.camera);
 
@@ -397,13 +422,50 @@
 				});
 			};
 		}
-		
+
 		function partition(arr, p) {
 			return arr.reduce((result, element) => {
 				result[p(element) ? 0 : 1].push(element);
 				return result;
 			},
-			[[], []]);
+				[[], []]);
+		}
+
+		function restart() {
+			velocity = 0;
+			my_tank.position.set(0, 0, 0);
+			my_tank.rotation.set(0, 0, 0);
+			my_tank.turret.rotation.set(0, 0, 0);
+
+			acc = 0;
+			turn = 0;
+			turret_turn = 0;
+
+			params.FollowMe = follow_mode[0];
+
+			bullets.forEach((r) => {
+				r.geometry.dispose();
+				r.material.dispose();
+				scene.remove(r);
+			});
+		}
+
+		function getRandom(min, max) {
+			return Math.floor(Math.random() * (max - min + 1)) + min;
+		};
+
+		function createBB8() {
+			var dir = new THREE.Vector3(getRandom(-20, 20), 0, getRandom(-20, 20));
+			var length = getRandom(params.minSpawnDistance * 50, 300);
+
+			dir.setLength(length);
+
+			var bb8 = new BB8();
+
+			bb8.position.copy(dir.add(my_tank.position));
+
+			bb8s.push(bb8);
+			scene.add(bb8);
 		}
 
 	</script>
