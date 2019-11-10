@@ -31,6 +31,7 @@
 		var my_tank, ring, plen = 0.7 * Math.PI;
 
 		var cameras = [];
+		var bullets = [];
 
 		var gravity = -9.8; // 向上為正
 		var velocity = 0;
@@ -70,6 +71,17 @@
 		};
 
 		Tank.prototype = Object.create(THREE.Object3D.prototype);
+		Tank.prototype.shoot = function() {
+			console.log("shoot");
+			var bullet = new THREE.Mesh(new THREE.SphereGeometry(0.2), new THREE.MeshPhongMaterial({ color: 0x333333 }));
+			bullet.position.copy(my_tank.shoot_pivot.getWorldPosition());
+			bullet.rotation.copy(my_tank.shoot_pivot.getWorldRotation());
+			bullet.velocity = new THREE.Vector3(0, 0, -50);
+			bullets.push(bullet);
+			scene.add(bullet);
+
+			return bullet;
+		};
 
 		init();
 
@@ -178,6 +190,7 @@
 				add.call(keyUpMap, 'd', () => { turn = 0; });
 				add.call(keyUpMap, 37, () => { turret_turn = 0; });
 				add.call(keyUpMap, 39, () => { turret_turn = 0; });
+				add.call(keyUpMap, ' ', () => { my_tank.shoot(); });
 			})();
 
 			window.onkeydown = function (event) {
@@ -242,6 +255,21 @@
 			// 	params.w = 0;
 			// }
 			// }
+
+			bullets.forEach((bullet) => {
+				bullet.translateOnAxis(bullet.velocity.clone().setLength(1), bullet.velocity.length() * dt);
+				bullet.position.y += 0.5 * gravity * dt * dt;
+
+				bullet.velocity.y += gravity * dt;
+			});
+
+			const [s, f] = partition(bullets, (bullet) => { return bullet.position.y > -1; });
+			bullets = s;
+			f.forEach((r) => {
+				r.geometry.dispose();
+				r.material.dispose();
+				scene.remove(r);
+			});
 
 			switch (follow_mode.indexOf(params.FollowMe)) {
 				case 0:
@@ -336,12 +364,20 @@
 			this.turret.position.set(0, 4.5, 0.5);
 			this.add(this.turret);
 
+			this.tank_gun_pivot = new THREE.Object3D();
+			this.tank_gun_pivot.position.set(0, 0.23, -2.65);
+			this.turret.add(this.tank_gun_pivot);
+
 			this.tank_gun = new THREE.Mesh(
 				new THREE.CylinderGeometry(0.2, 0.2, 2.3, 7),
 				new THREE.MeshPhongMaterial({ color: 0x659157 }));
-			this.tank_gun.position.set(0, 0.23, -2.65);
+			// this.tank_gun.position.set(0, 0.23, -2.65);
 			this.tank_gun.rotation.x = Math.PI / 2;
-			this.turret.add(this.tank_gun);
+			this.tank_gun_pivot.add(this.tank_gun);
+
+			this.shoot_pivot = new THREE.Object3D();
+			this.shoot_pivot.position.set(0, 0, -1);
+			this.tank_gun_pivot.add(this.shoot_pivot);
 
 			scene.add(this);
 
@@ -369,6 +405,14 @@
 						((Math.sign(velocity) | 1) * Math.sign(wh.position.x) * turn * 2 * Math.PI * time * (params.rotSpeed / 15));
 				});
 			};
+		}
+		
+		function partition(arr, p) {
+			return arr.reduce((result, element) => {
+				result[p(element) ? 0 : 1].push(element);
+				return result;
+			},
+			[[], []]);
 		}
 
 	</script>
