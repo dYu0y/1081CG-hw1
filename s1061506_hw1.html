@@ -34,6 +34,7 @@
 		var bullets = [];
 		var bb8s = [];
 		var preSpawnTime;
+		var gt = 0;
 
 		var gravity = -9.8; // 向上為正
 		var velocity = 0;
@@ -59,6 +60,7 @@
 
 		var gui, params;
 		var guiMe = function () {
+			this.GameTime = 0;
 			this.Heading = heading;
 			this.BarrelHeading = velocity;
 			this.addSpeed = 15;
@@ -66,6 +68,9 @@
 			this.tankGunRotSpeed = 15;
 			this.Stop = function () {
 				velocity = 0.0;
+				acc = 0;
+				turn = 0;
+				turret_turn = 0;
 				this.Velocity = velocity;
 			};
 			this.FollowMe = follow_mode[0];
@@ -153,6 +158,7 @@
 			params = new guiMe();
 			gui = new dat.GUI();
 
+			gui.add(params, 'GameTime').listen();
 			gui.add(params, 'Heading').listen();
 			gui.add(params, 'BarrelHeading').listen();
 			gui.add(params, 'addSpeed', 0, 30);
@@ -232,6 +238,8 @@
 			// Rotate the wheel
 			var dt = (Date.now() - lastTime) / 1000.0;
 			lastTime = Date.now();
+			gt += dt;
+			params.GameTime = Math.floor(gt);
 			// mesh.rotateOnWorldAxis(new THREE.Vector3(0, 1, 0), params.rotSpeed * deltaTime / 1000.0);
 			my_tank.rotation.y = (my_tank.rotation.y + (Math.sign(velocity) | 1) * turn * (0.5 * Math.PI) * (params.rotSpeed / 30) * dt + 2 * Math.PI) % (2 * Math.PI);
 			// mesh.rotateOnAxis(new THREE.Vector3(0, 0, 1), deltaTime / 1000.0);
@@ -260,7 +268,8 @@
 				bb8.lookAt(my_tank.position.clone());
 				bb8.translateZ(bb8Velocity * dt);
 				bb8.animate(dt);
-				if(bb8.position.distanceTo(my_tank.position));
+				if(bb8.position.distanceTo(my_tank.position) < 6)
+					;
 			});
 			// if (my_tank.position.y > 0) {
 			// params.w += gravity * dt;
@@ -432,6 +441,7 @@
 		}
 
 		function restart() {
+			gt = 0;
 			velocity = 0;
 			my_tank.position.set(0, 0, 0);
 			my_tank.rotation.set(0, 0, 0);
@@ -448,6 +458,14 @@
 				r.material.dispose();
 				scene.remove(r);
 			});
+			bullets = [];
+
+			bb8s.forEach((r) => {
+				r.geometry_.dispose();
+				r.material_.dispose();
+				scene.remove(r);
+			});
+			bb8s = [];
 		}
 
 		function getRandom(min, max) {
