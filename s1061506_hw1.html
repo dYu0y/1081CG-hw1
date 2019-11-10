@@ -28,7 +28,7 @@
 
 		var light, light2, light3;
 		var camera, scene, renderer;
-		var my_tank, ring, plen = 0.7 * Math.PI;
+		var my_tank;
 
 		var cameras = [];
 		var bullets = [];
@@ -79,9 +79,10 @@
 			bullet.velocity = new THREE.Vector3(0, 0, -50);
 			bullets.push(bullet);
 			scene.add(bullet);
-
+			
 			return bullet;
 		};
+		BB8.prototype = Object.create(THREE.Object3D.prototype);
 
 		init();
 
@@ -156,10 +157,6 @@
 			gui.add(params, 'y', -10, 10, 0.1).listen();
 			gui.add(params, 'z', -10, 10, 0.1).listen();
 			gui.open();
-
-			ring = new THREE.Mesh(new THREE.RingGeometry(4, 5, 7, 1, 0, 0.7 * Math.PI), new THREE.MeshBasicMaterial({ color: 0xffff00, side: THREE.DoubleSide }));
-			ring.rotation.y = Math.PI;
-			scene.add(ring);
 
 			(function addKeyBindings() {
 				var add = function (key, callback) {
@@ -289,12 +286,6 @@
 					renderer.render(scene, camera);
 					break;
 				default:
-			}
-
-			if (plen !== params.len) {
-				ring.geometry = new THREE.RingGeometry(4, 5, 10, 8, 0, params.len);
-				plen = params.len;
-				console.log("redraw!!");
 			}
 
 			requestAnimationFrame(animate);
