@@ -63,6 +63,7 @@
 			this.GameTime = 0;
 			this.Heading = heading;
 			this.BarrelHeading = velocity;
+			this.hp = 5;
 			this.addSpeed = 15;
 			this.rotSpeed = 15;
 			this.tankGunRotSpeed = 15;
@@ -161,6 +162,7 @@
 			gui.add(params, 'GameTime').listen();
 			gui.add(params, 'Heading').listen();
 			gui.add(params, 'BarrelHeading').listen();
+			gui.add(params, 'hp', 0, 5, 1).listen();
 			gui.add(params, 'addSpeed', 0, 30);
 			gui.add(params, 'rotSpeed', 0, 30);
 			gui.add(params, 'tankGunRotSpeed', 0, 30);
@@ -263,14 +265,32 @@
 			let rng = 500 / 2 - my_tank.width; // plane.geometry.parameters.width
 			my_tank.position.min(new THREE.Vector3(rng, 0, rng)).max(new THREE.Vector3(-rng, 0, -rng));
 
+			var rest = [], toBeRm = [];
 			bb8Velocity = params.bb8Speed / 30 * 64;
 			bb8s.forEach((bb8) => {
 				bb8.lookAt(my_tank.position.clone());
 				bb8.translateZ(bb8Velocity * dt);
 				bb8.animate(dt);
-				if(bb8.position.distanceTo(my_tank.position) < 6)
-					;
+
+				bullets.forEach((bullet) => {
+
+				});
+
+				if (bb8.position.distanceTo(my_tank.position) < 6) {
+					--params.hp;
+					toBeRm.push(bb8);
+				}
+				else
+					rest.push(bb8);
 			});
+			bb8s = rest;
+			toBeRm.forEach((bb8) => {
+				bb8.geometry_.dispose();
+				bb8.material_.dispose();
+				scene.remove(bb8);
+			});
+			toBeRm = [];
+
 			// if (my_tank.position.y > 0) {
 			// params.w += gravity * dt;
 			// my_tank.position.y += dt * (params.w + gravity * dt / 2);
@@ -298,7 +318,7 @@
 			if (lastTime - preSpawnTime > params.spawnCd * 800) {
 				preSpawnTime = lastTime;
 				var num = Math.min(getRandom(2, 6), 40 - bb8s.length);
-				for(var i = 0; i < num; ++i)
+				for (var i = 0; i < num; ++i)
 					createBB8();
 			}
 
@@ -322,6 +342,9 @@
 				default:
 			}
 
+			if (params.hp <= 0) {
+				return;
+			}
 			requestAnimationFrame(animate);
 		}
 
@@ -443,6 +466,7 @@
 		function restart() {
 			gt = 0;
 			velocity = 0;
+			params.hp = 5;
 			my_tank.position.set(0, 0, 0);
 			my_tank.rotation.set(0, 0, 0);
 			my_tank.turret.rotation.set(0, 0, 0);
@@ -466,6 +490,7 @@
 				scene.remove(r);
 			});
 			bb8s = [];
+			requestAnimationFrame(animate);
 		}
 
 		function getRandom(min, max) {
